@@ -1,0 +1,23 @@
+project-root/
+  ├── app.js               # Entry point of your application
+  ├── package.json         # Node.js project configuration
+  ├── .env                 # Environment variables (for sensitive data)
+  ├── routes/              # Route handlers
+  │   ├── userRoutes.js    # Example route for users
+  │   └── ...              # Other route files
+  ├── controllers/         # Business logic controllers
+  │   ├── userController.js# Example controller for users
+  │   └── ...              # Other controller files
+  ├── models/              # Data models (database schema)
+  │   ├── userModel.js     # Example model for users
+  │   └── ...              # Other model files
+  ├── middleware/          # Custom middleware functions
+  │   ├── authMiddleware.js# Authentication middleware
+  │   └── ...              # Other middleware files
+  ├── config/              # Configuration files
+  │   ├── database.js      # MySQL database configuration
+  │   └── ...              # Other config files
+  ├── public/              # Publicly accessible files (e.g., front-end assets)
+  ├── tests/               # Test files and test-related configuration
+  ├── utils/               # Utility functions or modules
+  └── ...
