@@ -5,51 +5,6 @@ const jwtSecretKey = process.env.JWT_SECRET;
 
 // Controller methods for user routes
 const userController = {
-    getAllUsers: async (req, res) => {
-        // Retrieve and send a list of users from the database
-        try {
-            const connection = await createConnection();
-            // Retrieve a list of users from the database
-            const [rows, fields] = await connection.execute('SELECT * FROM users');
-            connection.end(); // Close the connection when done
-
-            // Check if there are no users found
-            if (rows.length === 0) {
-                return res.status(404).json({ result: [], message: 'No users found' });
-            }
-
-            // Send the list of users as a response
-            return res.status(200).json({ result: rows, message: 'Successfully fetched' });
-        } catch (error) {
-            // Handle database errors or other exceptions
-            console.error(error);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-    },
-    getUserById: async (req, res) => {
-        // Retrieve and send a user by ID from the database
-        const userId = req.params.id;
-
-        try {
-            const connection = await createConnection();
-
-            // Check if the user with the provided ID exists
-            const [user] = await connection.execute('SELECT * FROM users WHERE id = ?', [userId]);
-
-            if (user.length === 0) {
-                connection.end();
-                return res.status(404).json({ error: 'User not found' });
-            }
-
-            connection.end();
-            res.json({ user: user[0] });
-        }
-        catch (error) {
-            // Handle database errors or other exceptions
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    },
     createUser: async (req, res) => {
         // Create a new user in the database
         const { username, password } = req.body;
@@ -57,7 +12,7 @@ const userController = {
             const connection = await createConnection();
 
             // Check if the username already exists in the database
-            const [existingUsers] = await connection.execute('SELECT * FROM users WHERE username = ?', [username]);
+            const [existingUsers] = await connection.execute('SELECT id FROM users WHERE username = ?', [username]);
 
             if (existingUsers.length > 0) {
                 // Username already exists
@@ -70,11 +25,12 @@ const userController = {
 
             // Insert a new user into the database
             const [rows, fields] = await connection.execute('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword]);
-            const userId = rows.insertId; // Assuming your database returns the newly inserted user's ID
-
             connection.end();
+
+            const userId = rows.insertId; // Assuming your database returns the newly inserted user's ID
             // Create a JWT token for the newly registered user
             const token = jwt.sign({ userId }, jwtSecretKey, { expiresIn: '1h' }); // Token expires in 1 hour
+
             res.status(201).json({ message: 'User created successfully', token });
 
         } catch (error) {
@@ -87,34 +43,73 @@ const userController = {
         // Create a new user in the database
         const { username, password } = req.body;
         try {
-
             const connection = await createConnection();
-
             // Fetch user data based on the provided username
-            const [rows] = await connection.execute(`SELECT * FROM users WHERE username = '${username}'`);
+            const [rows] = await connection.execute(`SELECT id, username, password FROM users WHERE username = '${username}'`);
+            // Closing the connection.
+            connection.end();
 
-            if (rows.length === 0) {
-                // User not found
-                return res.status(401).json({ error: 'Invalid credentials' });
-            }
+            // User not found
+            if (rows.length === 0) return res.status(401).json({ error: 'Invalid Credentials' });
 
+            // Data storing into user.
             const user = rows[0];
 
             // Check if the provided password matches the stored hashed password
             const passwordMatch = await bcrypt.compare(password, user.password);
 
-            if (!passwordMatch) {
-                // Password is incorrect
-                return res.status(401).json({ error: 'Invalid credentials' });
-            }
-            // Create a JWT token for the authenticated user
-            const token = jwt.sign({ username }, jwtSecretKey, { expiresIn: '1h' }); // Token expires in 1 hour
+            // Password is incorrect
+            if (!passwordMatch) return res.status(401).json({ error: 'Invalid Credentials' });
 
-            connection.end();
+            // Create a JWT token for the authenticated user...
+            const token = jwt.sign({ userId: user.id }, jwtSecretKey, { expiresIn: '1h' }); // Token expires in 1 hour
 
-            res.status(201).json({ message: 'Login successful', token });
+            res.status(201).json({ message: 'Login Successfull', user: { id: user.id, username: user.username, token } });
 
         } catch (error) {
+            // Handle database errors or other exceptions
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    },
+    getAllUsers: async (req, res) => {
+        // Retrieve and send a list of users from the database
+        try {
+            const connection = await createConnection();
+            // Retrieve a list of users from the database
+            const [rows, fields] = await connection.execute('SELECT id, username FROM users');
+            connection.end(); // Close the connection when done
+
+            // Check if there are no users found
+            if (rows.length === 0) {
+                return res.status(404).json({ result: [], message: 'No users found' });
+            }
+
+            // Send the list of users as a response
+            return res.status(200).json({ result: rows, message: 'Successfully Fetched' });
+        } catch (error) {
+            // Handle database errors or other exceptions
+            console.error(error);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    },
+    getUserById: async (req, res) => {
+        // Retrieve and send a user by ID from the database
+        const userId = req.params.id;
+
+        try {
+            // Creating the connection.
+            const connection = await createConnection();
+            // Check if the user with the provided ID exists
+            const [user] = await connection.execute('SELECT id, username FROM users WHERE id = ?', [userId]);
+            // Closing the connection.
+            connection.end();
+
+            if (user.length === 0) return res.status(404).json({ message: 'The requested user was not found.' });
+
+            res.json({ user: user[0] });
+        }
+        catch (error) {
             // Handle database errors or other exceptions
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
